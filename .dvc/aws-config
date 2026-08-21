@@ -1,0 +1,4 @@
+[default]
+region = ap-singapore-1
+s3 =
+    addressing_style = path

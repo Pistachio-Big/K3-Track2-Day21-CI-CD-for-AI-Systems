@@ -3,3 +3,5 @@
 ['remote "myremote"']
     url = s3://mlops-lab-k3/dvc
     endpointurl = https://ax0mh86uvuww.compat.objectstorage.ap-singapore-1.oraclecloud.com
+    region = ap-singapore-1
+    configpath = .dvc/aws-config

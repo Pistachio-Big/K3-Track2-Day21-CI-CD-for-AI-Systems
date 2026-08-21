@@ -1,0 +1,5 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = s3://mlops-lab-k3/dvc
+    endpointurl = https://ax0mh86uvuww.compat.objectstorage.ap-singapore-1.oraclecloud.com

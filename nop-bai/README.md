@@ -12,7 +12,7 @@ Mỗi ảnh tương ứng một tiêu chí trong rubric.
 | `screenshots/04-curl-predict.png` | `/predict` → `prediction 0 / label thap` | B7 | ✅ |
 | `screenshots/05-object-storage.png` | OCI Object Storage: `dvc/files/md5/` (3 object) | B4 | ✅ |
 | `report-buoc3/report.txt` | Confusion matrix + precision/recall (model 0.746) tải từ artifact | Bonus 3 | ✅ |
-| `screenshots/07-dagshub-mlflow.png` | (Tùy chọn) MLflow trên DagsHub | Bonus 1 | ⏳ |
+| `screenshots/07-dagshub-mlflow.png` | MLflow trên DagsHub (run từ GitHub Actions, acc 0.746) | Bonus 1 | ✅ |
 
 ## Kết quả then chốt
 - Bộ tham số tốt nhất (Bước 1): RandomForest `n_estimators=300, max_depth=None` → accuracy **0.682**.

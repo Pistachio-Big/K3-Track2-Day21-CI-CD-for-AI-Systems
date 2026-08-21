@@ -143,8 +143,11 @@ Add Ingress Rule: Source `0.0.0.0/0`, IP Protocol TCP, Destination Port `8000`.
 
 **(b) Firewall trên chính VM** (ảnh Ubuntu của OCI chặn sẵn port ≠ 22):
 ```bash
-# SSH vào VM roi chay:
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
+# Kiem tra vi tri rule REJECT truoc:
+sudo iptables -L INPUT --line-numbers
+# Chen rule 8000 NGAY TRUOC dong REJECT (thuong REJECT o dong 5 -> chen vao 5).
+# QUAN TRONG: neu chen SAU REJECT thi bi chan, cong van dong tu ngoai.
+sudo iptables -I INPUT 5 -m state --state NEW -p tcp --dport 8000 -j ACCEPT
 sudo netfilter-persistent save     # luu de reboot van con
 ```
 

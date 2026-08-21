@@ -1,0 +1,12 @@
+=== BAO CAO HIEU SUAT MO HINH ===
+
+Confusion Matrix (hang = thuc te, cot = du doan):
+        pred_0  pred_1  pred_2
+true_0     141      30       2
+true_1      46     168      13
+true_2       0      36      64
+
+Precision / Recall / F1 cho tung lop:
+  Lop 0: precision=0.7540 recall=0.8150 f1=0.7833 support=173
+  Lop 1: precision=0.7179 recall=0.7401 f1=0.7289 support=227
+  Lop 2: precision=0.8101 recall=0.6400 f1=0.7151 support=100

@@ -146,7 +146,12 @@ def train(
         # 6. Ghi nhan chi so vao MLflow
         mlflow.log_metric("accuracy", acc)
         mlflow.log_metric("f1_score", f1)
-        mlflow.sklearn.log_model(model, "model")
+        # log_model co the loi khi tracking server tu xa (DagsHub) khong cho upload
+        # artifact -> bao ve pipeline: params/metrics van duoc ghi len server.
+        try:
+            mlflow.sklearn.log_model(model, "model")
+        except Exception as e:
+            print(f"[WARN] Bo qua log_model len MLflow artifact store: {e}")
 
         # 7. In ket qua ra man hinh
         print(f"Model: {model_type} | Accuracy: {acc:.4f} | F1: {f1:.4f}")

@@ -225,6 +225,10 @@ Thêm 8 secrets sau (không có khoảng trắng thừa):
 
 ## 4. Chạy pipeline (Bước 2 → Bước 3)
 
+> ⚠️ **Repo là FORK**: GitHub chặn auto-trigger (push) trên fork cho tới khi bạn vào
+> tab **Actions** bấm **"I understand my workflows, go ahead and enable them"**. Chưa bấm
+> thì chỉ chạy tay được (workflow_dispatch). Đã bấm rồi thì push tự chạy bình thường.
+
 ### Bước 2 — push code (bằng chứng B6)
 
 ```bash

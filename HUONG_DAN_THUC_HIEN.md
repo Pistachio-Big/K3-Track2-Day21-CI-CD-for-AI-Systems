@@ -111,6 +111,10 @@ export ENDPOINT=https://$NAMESPACE.compat.objectstorage.$REGION.oraclecloud.com
 dvc init
 dvc remote add -d myremote s3://$BUCKET/dvc
 dvc remote modify myremote endpointurl $ENDPOINT
+dvc remote modify myremote region $REGION
+# BAT BUOC cho OCI: ep path-style + region qua file cau hinh (xem muc 7).
+# File .dvc/aws-config da co san trong repo; chi can tro configpath:
+dvc remote modify myremote configpath .dvc/aws-config
 # Khoa bi mat -> ghi vao config.local (KHONG commit):
 dvc remote modify --local myremote access_key_id <ACCESS_KEY>
 dvc remote modify --local myremote secret_access_key <SECRET_KEY>
@@ -302,5 +306,15 @@ Workflow đã sẵn sàng: job Train đọc 3 biến từ secrets. Chỉ cần:
 
 - OCI Object Storage = **S3-compatible**; xác thực bằng **Customer Secret Key**, không phải service account JSON.
 - Mở port 8000 cần **cả** Security List/NSG của VCN **và** iptables trên VM (ảnh Ubuntu OCI chặn sẵn).
-- DVC dùng remote `s3://...` + `endpointurl`; `boto3` dùng `endpoint_url` + `addressing_style=path`.
+- **DVC bắt buộc path-style + region** (virtual-hosted lỗi SSL vì cert OCI không phủ subdomain bucket;
+  thiếu region → `SignatureDoesNotMatch`). Đã xử lý bằng file `.dvc/aws-config`:
+  ```
+  [default]
+  region = ap-singapore-1
+  s3 =
+      addressing_style = path
+  ```
+  và `dvc remote modify myremote configpath .dvc/aws-config` (file này đã commit → CI tự dùng).
+- Trên CI: creds lấy từ env `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` (secrets); region+addressing từ `.dvc/aws-config`.
+- `boto3` (serve.py, workflow upload) dùng `endpoint_url` + `Config(s3={"addressing_style":"path"}, signature_version="s3v4")`.
 - User SSH mặc định: `ubuntu` (Ubuntu image) hoặc `opc` (Oracle Linux).

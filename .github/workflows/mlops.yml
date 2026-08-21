@@ -34,8 +34,8 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # JOB 2 - TRAIN
-  # Xac thuc cloud storage, pull du lieu bang DVC, huan luyen mo hinh, upload artifact.
-  # Chi chay khi Job 1 (Unit Test) hoan thanh thanh cong.
+  # Xac thuc OCI Object Storage (S3-compatible), pull du lieu bang DVC,
+  # huan luyen mo hinh, upload artifact. Chi chay khi Job 1 hoan thanh.
   # ---------------------------------------------------------------------------
   train:
     name: Train
@@ -44,12 +44,17 @@ jobs:
     outputs:
       accuracy: ${{ steps.read_metrics.outputs.accuracy }}
 
-    # Bonus 1 (DagsHub): neu 3 secrets nay ton tai, MLflow se ghi len tracking
-    # server tu xa. Neu khong, mlflow ghi cuc bo (mlruns/) va pipeline van chay binh thuong.
     env:
+      # Bonus 1 (DagsHub): neu co 3 secret nay, MLflow ghi len tracking server tu xa.
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
       MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      # OCI Object Storage qua S3-compatible API (dung cho DVC va boto3).
+      AWS_ACCESS_KEY_ID: ${{ secrets.OCI_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.OCI_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.OCI_REGION }}
+      S3_ENDPOINT_URL: ${{ secrets.OCI_S3_ENDPOINT }}
+      CLOUD_BUCKET: ${{ secrets.CLOUD_BUCKET }}
 
     steps:
       - uses: actions/checkout@v4
@@ -61,14 +66,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Authenticate to Cloud Storage
-        # Ghi noi dung credentials ra file tam va set bien moi truong xac thuc (GCP).
-        run: |
-          echo '${{ secrets.CLOUD_CREDENTIALS }}' > /tmp/sa-key.json
-          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json" >> $GITHUB_ENV
-
+      # DVC doc AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY tu env (job-level env o tren);
+      # endpointurl cua OCI da nam trong .dvc/config (commit vao git, khong phai secret).
       - name: Pull data with DVC
-        # Chi pull train_phase1.csv va eval.csv (khong can train_phase2.csv).
         run: dvc pull data/train_phase1.csv data/eval.csv
 
       - name: Train model
@@ -82,26 +82,29 @@ jobs:
           echo "Accuracy do duoc: $ACC"
 
       - name: Rollback guard - so sanh voi model dang chay (Bonus 4)
-        # Tai metrics.json cua model hien tai tren cloud (neu co) va so sanh.
-        # Chi cho phep tiep tuc khi accuracy moi >= accuracy cu.
         run: |
           python - <<'EOF'
-          import json, os
-          from google.cloud import storage
+          import json, os, boto3
+          from botocore.client import Config
+          from botocore.exceptions import ClientError
 
-          bucket_name = "${{ secrets.CLOUD_BUCKET }}"
+          bucket = os.environ["CLOUD_BUCKET"]
+          s3 = boto3.client(
+              "s3",
+              endpoint_url=os.environ["S3_ENDPOINT_URL"],
+              region_name=os.environ.get("AWS_DEFAULT_REGION"),
+              config=Config(s3={"addressing_style": "path"}, signature_version="s3v4"),
+          )
           new_acc = json.load(open("outputs/metrics.json"))["accuracy"]
 
-          client = storage.Client()
-          bucket = client.bucket(bucket_name)
-          blob = bucket.blob("models/latest/metrics.json")
-
-          if not blob.exists():
+          try:
+              obj = s3.get_object(Bucket=bucket, Key="models/latest/metrics.json")
+              old_acc = json.loads(obj["Body"].read())["accuracy"]
+          except ClientError:
               print(f"Chua co model truoc do tren cloud. Bo qua kiem tra rollback. "
                     f"Accuracy moi = {new_acc:.4f}")
               raise SystemExit(0)
 
-          old_acc = json.loads(blob.download_as_text())["accuracy"]
           print(f"Accuracy cu = {old_acc:.4f} | Accuracy moi = {new_acc:.4f}")
           if new_acc < old_acc:
               raise SystemExit(
@@ -111,20 +114,22 @@ jobs:
           print("PASSED rollback guard: model moi khong kem hon model cu.")
           EOF
 
-      - name: Upload model to Cloud Storage
-        # Upload models/model.pkl -> <bucket>/models/latest/model.pkl
-        # Va upload metrics.json de lan chay sau co the so sanh (Bonus 4).
+      - name: Upload model to OCI Object Storage
         run: |
           python - <<'EOF'
-          from google.cloud import storage
+          import os, boto3
+          from botocore.client import Config
 
-          bucket_name = "${{ secrets.CLOUD_BUCKET }}"
-          client = storage.Client()
-          bucket = client.bucket(bucket_name)
-
-          bucket.blob("models/latest/model.pkl").upload_from_filename("models/model.pkl")
-          bucket.blob("models/latest/metrics.json").upload_from_filename("outputs/metrics.json")
-          print(f"Da upload model va metrics len gs://{bucket_name}/models/latest/")
+          bucket = os.environ["CLOUD_BUCKET"]
+          s3 = boto3.client(
+              "s3",
+              endpoint_url=os.environ["S3_ENDPOINT_URL"],
+              region_name=os.environ.get("AWS_DEFAULT_REGION"),
+              config=Config(s3={"addressing_style": "path"}, signature_version="s3v4"),
+          )
+          s3.upload_file("models/model.pkl", bucket, "models/latest/model.pkl")
+          s3.upload_file("outputs/metrics.json", bucket, "models/latest/metrics.json")
+          print(f"Da upload model va metrics len s3://{bucket}/models/latest/ (OCI)")
           EOF
 
       - name: Save metrics as artifact
@@ -163,7 +168,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # JOB 4 - DEPLOY
-  # Trien khai len VM qua SSH. Chi chay khi Job 3 (Eval) hoan thanh thanh cong.
+  # Trien khai len OCI Compute VM qua SSH. Chi chay khi Job 3 (Eval) thanh cong.
   # ---------------------------------------------------------------------------
   deploy:
     name: Deploy

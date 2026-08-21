@@ -1,5 +1,12 @@
-# Sieu tham so cho mo hinh RandomForestClassifier
-# Thay doi cac gia tri nay giua cac lan chay de thi nghiem (Buoc 1)
-n_estimators: 100
-max_depth: 5
+# Sieu tham so cho mo hinh (Buoc 1)
+# Thay doi cac gia tri nay giua cac lan chay de thi nghiem.
+#
+# model_type ho tro (Bonus 2): random_forest | gradient_boosting | logistic_regression
+#
+# Bo tham so tot nhat tim duoc o Buoc 1 (RandomForest, khong gioi han do sau).
+# Voi 2998 mau (Buoc 2): accuracy ~0.68 -> nam duoi nguong 0.70 -> eval gate CHAN deploy.
+# Voi 5996 mau (Buoc 3): accuracy ~0.75 -> vuot nguong -> deploy tu dong.
+model_type: random_forest
+n_estimators: 300
+max_depth: null        # null = khong gioi han do sau (cho accuracy cao nhat)
 min_samples_split: 2

@@ -10,3 +10,4 @@ model_type: random_forest
 n_estimators: 300
 max_depth: null        # null = khong gioi han do sau (cho accuracy cao nhat)
 min_samples_split: 2
+# (giu bo tham so tot nhat tu Buoc 1)
